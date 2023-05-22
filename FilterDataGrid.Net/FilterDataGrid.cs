@@ -86,10 +86,10 @@ namespace FilterDataGrid
         #region Public DependencyProperty
 
         /// <summary>
-        ///     Excluded Fields on AutoColumn
+        ///     Included Fields on AutoColumn
         /// </summary>
-        public static readonly DependencyProperty ExcludeFieldsProperty =
-            DependencyProperty.Register("ExcludeFields",
+        public static readonly DependencyProperty IncludeFieldsProperty =
+            DependencyProperty.Register("IncludeFieldsProperty",
                 typeof(string),
                 typeof(FilterDataGrid),
                 new PropertyMetadata(""));
@@ -164,7 +164,7 @@ namespace FilterDataGrid
         private double sizableContentWidth;
         private Grid sizableContentGrid;
 
-        private List<string> excludedFields;
+        private List<string> includeFields;
         private List<FilterItemDate> treeView;
         private List<FilterItem> listBoxItems;
 
@@ -189,12 +189,12 @@ namespace FilterDataGrid
         #region Public Properties
 
         /// <summary>
-        ///     Excluded Fields
+        ///     Included Fields
         /// </summary>
-        public string ExcludeFields
+        public string IncludeFields
         {
-            get => (string)GetValue(ExcludeFieldsProperty);
-            set => SetValue(ExcludeFieldsProperty, value);
+            get => (string)GetValue(IncludeFieldsProperty);
+            set => SetValue(IncludeFieldsProperty, value);
         }
 
         /// <summary>
@@ -371,9 +371,7 @@ namespace FilterDataGrid
                 // FilterLanguage : default : 0 (english)
                 Translate = new Loc { Language = FilterLanguage };
 
-                // fill excluded Fields list with values
-                if (AutoGenerateColumns)
-                    excludedFields = ExcludeFields.Split(',').Select(p => p.Trim()).ToList();
+                includeFields = IncludeFields.Split(',').Select(p => p.Trim().Replace(" ", "")).ToList();
 
                 // sorting event
                 Sorted += OnSorted;
@@ -415,11 +413,12 @@ namespace FilterDataGrid
                     column.Binding.StringFormat = DateFormatString;
 
                 // add DataGridHeaderTemplate template if not excluded
-                if (excludedFields?.FindIndex(c =>
-                        string.Equals(c, e.PropertyName, StringComparison.CurrentCultureIgnoreCase)) == -1)
+                if (includeFields?.FindIndex(c =>
+                        string.Equals(c, e.PropertyName.Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) == -1)
                 {
-                    column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
-                    column.IsColumnFiltered = true;
+                    //column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
+                    //column.IsColumnFiltered = true;
+                    column.Visibility = Visibility.Collapsed;
                 }
 
                 e.Column = column;
@@ -711,6 +710,15 @@ namespace FilterDataGrid
                 foreach (var col in columns)
                 {
                     var columnType = col.GetType();
+
+                    bool includeColumn = includeFields?.FindIndex(c => 
+                        string.Equals(c, col.Header.ToString().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) != -1;
+                    
+                    if (!includeColumn)
+                    {
+                        col.Visibility = Visibility.Collapsed;
+                        continue;
+                    }
 
                     if (col.HeaderTemplate != null)
                     {
@@ -1274,7 +1282,7 @@ namespace FilterDataGrid
 
                 // get type of field
                 fieldType = null;
-                var fieldProperty = collectionType.GetProperty(fieldName);
+                var fieldProperty = Extensions.GetPropertyInfo(collectionType, fieldName);
 
                 // get type or underlying type if nullable
                 if (fieldProperty != null)
@@ -1307,12 +1315,12 @@ namespace FilterDataGrid
                         if (fieldType == typeof(DateTime))
                             // possible distinct values because time part is removed
                             sourceObjectList = Items.Cast<object>()
-                                .Select(x => (object)((DateTime?)fieldProperty?.GetValue(x, null))?.Date)
+                                .Select(x => (object)((DateTime?)Extensions.GetPropValue(x, fieldName))?.Date)
                                 .Distinct()
                                 .ToList();
                         else
                             sourceObjectList = Items.Cast<object>()
-                                .Select(x => fieldProperty?.GetValue(x, null))
+                                .Select(x => Extensions.GetPropValue(x, fieldName))
                                 .Distinct()
                                 .ToList();
                     });

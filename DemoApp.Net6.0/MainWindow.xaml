@@ -18,6 +18,7 @@
             <RowDefinition Height="1*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="1*" />
+            <RowDefinition Height="40" />
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" Margin="10,10,0,20">
@@ -88,11 +89,12 @@
             Grid.Row="2"
             AutoGenerateColumns="False"
             DateFormatString="d"
-            FilterLanguage="Turkish"
+            FilterLanguage="English"
             ItemsSource="{Binding FilteredList, UpdateSourceTrigger=PropertyChanged}"
             ShowElapsedTime="True"
             ShowRowsCount="True"
             ShowStatusBar="True"
+            IncludeFields="FirstName,Age"
             Style="{StaticResource FilterDatagridStyle}">
             <control:FilterDataGrid.Columns>
                 <control:DataGridTemplateColumn
@@ -159,9 +161,15 @@
             x:Name="FilterDataGridAuto"
             Grid.Row="4"
             AutoGenerateColumns="True"
-            ExcludeFields="lastname, age"
-            FilterLanguage="Hungarian"
+            IncludeFields="FirstName,Age,LastName,Salary"
+            FilterLanguage="English"
             ItemsSource="{Binding Employes, UpdateSourceTrigger=PropertyChanged}"
             Style="{StaticResource FilterDatagridStyle}" />
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal">
+            <Button  FontSize="20" Click="Button_Write_Click" Width="200">Write</Button>
+            <Button  FontSize="20" Click="Button_Read_Click" Width="200">Load</Button>
+            <Button  FontSize="20" Click="Button_MemorySet_Click" Width="200">Memory set</Button>
+        </StackPanel>
     </Grid>
 </Window>

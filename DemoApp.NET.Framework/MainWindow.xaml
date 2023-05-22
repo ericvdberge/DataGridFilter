@@ -159,7 +159,7 @@
             x:Name="FilterDataGridAuto"
             Grid.Row="4"
             AutoGenerateColumns="True"
-            ExcludeFields="lastname, age"
+            IncludeFields="lastname, age"
             FilterLanguage="Hungarian"
             ItemsSource="{Binding Employes, UpdateSourceTrigger=PropertyChanged}"
             Style="{StaticResource FilterDatagridStyle}" />
