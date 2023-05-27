@@ -94,7 +94,6 @@
             ShowElapsedTime="True"
             ShowRowsCount="True"
             ShowStatusBar="True"
-            IncludeFields="FirstName,Age"
             Style="{StaticResource FilterDatagridStyle}">
             <control:FilterDataGrid.Columns>
                 <control:DataGridTemplateColumn
@@ -161,7 +160,6 @@
             x:Name="FilterDataGridAuto"
             Grid.Row="4"
             AutoGenerateColumns="True"
-            IncludeFields="FirstName,Age,LastName,Salary"
             FilterLanguage="English"
             ItemsSource="{Binding Employes, UpdateSourceTrigger=PropertyChanged}"
             Style="{StaticResource FilterDatagridStyle}" />

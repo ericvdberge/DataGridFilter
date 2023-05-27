@@ -71,12 +71,22 @@ namespace DemoApp.Net6
 
         private async void Button_MemorySet_Click(object sender, RoutedEventArgs e)
         {
-            var filterPreset = FilterDataGrid.FilterPreset.ToList();
 
-            FilterDataGrid.FilterPreset = new List<FilterCommon>();
+            FilterDataGrid.IncludeFields = "FirstName,Age";
+            FilterDataGridAuto.IncludeFields = "FirstName,Age";
+
+
             await Task.Delay(5_000);
 
-            FilterDataGrid.FilterPreset = filterPreset;
+            FilterDataGrid.IncludeFields = "*";
+            FilterDataGridAuto.IncludeFields = "*";
+
+            //var filterPreset = FilterDataGrid.FilterPreset.ToList();
+
+            //FilterDataGrid.FilterPreset = new List<FilterCommon>();
+            //await Task.Delay(5_000);
+
+            //FilterDataGrid.FilterPreset = filterPreset;
 
         }
     }

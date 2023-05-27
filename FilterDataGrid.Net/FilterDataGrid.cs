@@ -92,7 +92,7 @@ namespace FilterDataGrid
             DependencyProperty.Register("IncludeFieldsProperty",
                 typeof(string),
                 typeof(FilterDataGrid),
-                new PropertyMetadata(""));
+                new PropertyMetadata("*"));
 
         /// <summary>
         ///     date format displayed
@@ -194,7 +194,12 @@ namespace FilterDataGrid
         public string IncludeFields
         {
             get => (string)GetValue(IncludeFieldsProperty);
-            set => SetValue(IncludeFieldsProperty, value);
+            set
+            {
+                SetValue(IncludeFieldsProperty, value);
+                ResetFields();
+                
+            }
         }
 
         /// <summary>
@@ -395,7 +400,9 @@ namespace FilterDataGrid
 
             try
             {
-                if (e.Column.GetType() != typeof(System.Windows.Controls.DataGridTextColumn)) return;
+                // get the columns that can be filtered
+                var isColumnGeneratable = e.Column is System.Windows.Controls.DataGridTextColumn;
+                if (!isColumnGeneratable) return;
 
                 var column = new DataGridTextColumn
                 {
@@ -412,13 +419,16 @@ namespace FilterDataGrid
                 if (fieldType == typeof(DateTime) && !string.IsNullOrEmpty(DateFormatString))
                     column.Binding.StringFormat = DateFormatString;
 
-                // add DataGridHeaderTemplate template if not excluded
-                if (includeFields?.FindIndex(c =>
-                        string.Equals(c, e.PropertyName.Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) == -1)
+                bool includeColumn = includeFields.Any(c => string.Equals(c, column.Header.ToString().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) ||
+                                     includeFields.Contains("*"); // * = include all fields, and is the default value
+
+                if (!includeColumn)
                 {
-                    //column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
-                    //column.IsColumnFiltered = true;
                     column.Visibility = Visibility.Collapsed;
+                }
+                if (includeColumn)
+                {
+                    column.Visibility = Visibility.Visible;
                 }
 
                 e.Column = column;
@@ -447,6 +457,10 @@ namespace FilterDataGrid
 
                 if (oldValue != null)
                 {
+
+                    includeFields = IncludeFields.Split(',').Select(p => p.Trim().Replace(" ", "")).ToList();
+                    Sorted += OnSorted;
+
                     // reset current filter, !important
                     CurrentFilter = null;
 
@@ -533,7 +547,10 @@ namespace FilterDataGrid
 
         #region Private Methods
 
-        //apply the filterpreset that is saved earlier
+        /// <summary>
+        ///     Resets all the filtered items in the datagrid
+        /// </summary>
+        /// <param name="filterPreset">all the saved filters from a datagrid</param>
         private void OnFilterPresetChanged(List<FilterCommon> filterPreset)
         {
             RemoveAllFilterCommand(null, null);
@@ -559,6 +576,41 @@ namespace FilterDataGrid
 
                 //apply current filter
                 ApplyFilterCommand(null, null);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="value"></param>
+        private void ResetFields()
+        {
+            OnInitialized(new EventArgs());
+            if (AutoGenerateColumns)
+            {
+                if (includeFields != null)
+                {
+                    if (includeFields.Contains("*"))
+                        includeFields = Columns.Select(c => c.Header.ToString()).ToList();
+
+                    foreach(DataGridColumn column in Columns)
+                    {
+                        column.Visibility = Visibility.Collapsed;
+                    }
+
+                    foreach (var propertyName in includeFields)
+                    {
+                        var column = new DataGridTextColumn {  Header = propertyName, Binding = new Binding(propertyName) };
+                        OnAutoGeneratingColumn(new DataGridAutoGeneratingColumnEventArgs(propertyName, column.GetType(), column));
+                        column.Visibility = Visibility.Visible;
+                    }
+                }
+                UpdateLayout();
+            }
+            else
+            {
+                //re-initialize the custom columns
+                GeneratingCustomsColumn();
             }
         }
 
@@ -711,13 +763,17 @@ namespace FilterDataGrid
                 {
                     var columnType = col.GetType();
 
-                    bool includeColumn = includeFields?.FindIndex(c => 
-                        string.Equals(c, col.Header.ToString().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) != -1;
+                    bool includeColumn = includeFields.Any(c => string.Equals(c, col.Header.ToString().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) || 
+                                         includeFields.Contains("*"); // * = include all fields, and is the default value
                     
                     if (!includeColumn)
                     {
                         col.Visibility = Visibility.Collapsed;
                         continue;
+                    }
+                    if(includeColumn)
+                    {
+                        col.Visibility = Visibility.Visible;
                     }
 
                     if (col.HeaderTemplate != null)
