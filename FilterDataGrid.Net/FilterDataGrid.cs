@@ -604,8 +604,12 @@ namespace FilterDataGrid
                         OnAutoGeneratingColumn(new DataGridAutoGeneratingColumnEventArgs(propertyName, column.GetType(), column));
                         column.Visibility = Visibility.Visible;
                     }
+
+                    // Refresh the UI by updating the ItemsSource property
+                    var itemsSource = ItemsSource;
+                    ItemsSource = null;
+                    ItemsSource = itemsSource;
                 }
-                UpdateLayout();
             }
             else
             {
