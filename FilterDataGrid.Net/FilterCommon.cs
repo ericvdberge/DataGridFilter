@@ -12,13 +12,13 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace FilterDataGrid
 {
-    public sealed class FilterCommon : NotifyProperty
+    public sealed class FilterCommon : NotifyProperty, ISerializable
     {
         #region Private Fields
 
@@ -30,8 +30,15 @@ namespace FilterDataGrid
 
         public FilterCommon()
         {
-            PreviouslyFilteredItems = new HashSet<object>(EqualityComparer<object>.Default);
+            FilteredItems = new HashSet<object>(EqualityComparer<object>.Default);
             Criteria = new HashSet<Predicate<object>>();
+        }
+
+        protected FilterCommon(SerializationInfo info, StreamingContext context)
+        {
+            FieldName = info.GetString(nameof(FieldName));
+            FilteredItems = new HashSet<object>((object[])info.GetValue(nameof(FilteredItems), typeof(object[])));
+            IsFiltered = info.GetBoolean(nameof(IsFiltered));
         }
 
         #endregion Public Constructors
@@ -40,13 +47,10 @@ namespace FilterDataGrid
 
         public string FieldName { get; set; }
 
-        [JsonIgnore]
         public Type FieldType { get; set; }
 
-        [JsonIgnore]
         public PropertyInfo FieldProperty { get; set; }
 
-        [JsonIgnore]
         public bool IsFiltered
         {
             get => isFiltered;
@@ -57,12 +61,10 @@ namespace FilterDataGrid
             }
         }
 
-        public HashSet<object> PreviouslyFilteredItems { get; set; }
+        public HashSet<object> FilteredItems { get; set; }
 
-        [JsonIgnore]
         public HashSet<Predicate<object>> Criteria { get; set; }
 
-        [JsonIgnore]
         public Loc Translate { get; set; }
 
         #endregion Public Properties
@@ -83,7 +85,7 @@ namespace FilterDataGrid
                     ? ((DateTime?)Extensions.GetPropValue(o, FieldName))?.Date
                     : Extensions.GetPropValue(o, FieldName);
 
-                return !PreviouslyFilteredItems.Contains(value);
+                return FilteredItems.Contains(value);
             }
 
             // add to list of predicates
@@ -98,6 +100,13 @@ namespace FilterDataGrid
             Criteria.Clear();
             isFiltered = false;
             return true;
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue(nameof(FieldName), FieldName);
+            info.AddValue(nameof(FilteredItems), FilteredItems);
+            info.AddValue(nameof(IsFiltered), IsFiltered);
         }
 
         #endregion Public Methods
