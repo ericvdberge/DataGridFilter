@@ -13,11 +13,14 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
+// ReSharper disable UseNameofExpression
 // ReSharper disable UnusedMember.Global
 // ReSharper disable RedundantAssignment
 // ReSharper disable UnusedType.Global
@@ -27,7 +30,6 @@ using System.Windows.Media;
 
 namespace FilterDataGrid
 {
-
     /// <summary>
     /// Attached Property "FilterState" to Filter Button
     /// </summary>
@@ -64,13 +66,13 @@ namespace FilterDataGrid
         #region Public Fields
 
         public static readonly DependencyProperty ScrollToTopProperty =
-        DependencyProperty.RegisterAttached
-        (
-            "ScrollToTop",
-            typeof(bool),
-            typeof(ScrollToTopBehavior),
-            new UIPropertyMetadata(false, OnScrollToTopPropertyChanged)
-        );
+            DependencyProperty.RegisterAttached
+            (
+                "ScrollToTop",
+                typeof(bool),
+                typeof(ScrollToTopBehavior),
+                new UIPropertyMetadata(false, OnScrollToTopPropertyChanged)
+            );
 
         #endregion Public Fields
 
@@ -116,7 +118,7 @@ namespace FilterDataGrid
             if (itemsControl != null)
             {
                 DependencyPropertyDescriptor dependencyPropertyDescriptor =
-                        DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(ItemsControl));
+                    DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(ItemsControl));
 
                 if (dependencyPropertyDescriptor != null)
                 {
@@ -139,9 +141,44 @@ namespace FilterDataGrid
     {
         #region Public Methods
 
-        public static HashSet<T> ToHashSet<T>(this IEnumerable<T> source, IEqualityComparer<T> comparer = null)
+        public static bool IsSystemType(this Type type) => type.Assembly == typeof(object).Assembly;
+
+        public static object GetPropertyValue(this object obj, string propertyName)
         {
-            return new HashSet<T>(source, comparer);
+            if (obj == null) throw new ArgumentException("Value cannot be null.", nameof(obj));
+            if (propertyName == null) throw new ArgumentException("Value cannot be null.", nameof(propertyName));
+
+            foreach (var prop in propertyName.Split('.').Select(s => obj?.GetType().GetProperty(s)))
+                obj = prop?.GetValue(obj, null);
+            return obj;
+        }
+
+        public static T GetPropertyValue<T>(this object obj, string propertyName)
+        {
+            foreach (var prop in propertyName.Split('.').Select(s => obj?.GetType().GetProperty(s)))
+                obj = prop?.GetValue(obj, null);
+
+            return (obj != null) ? (T)obj : default;
+        }
+
+        public static PropertyInfo GetPropertyInfo(this Type srcType, string propertyName)
+        {
+            if (srcType == null) throw new ArgumentException("Value cannot be null.", nameof(srcType));
+            if (propertyName == null) throw new ArgumentException("Value cannot be null.", nameof(propertyName));
+
+            PropertyInfo infos = null;
+
+            if (!propertyName.Contains('.')) return srcType.GetProperty(propertyName);
+
+            foreach (var info in propertyName.Split('.')
+                         .Select(s => srcType?.GetProperty(s, BindingFlags.Public | BindingFlags.Instance)))
+            {
+                srcType = info?.PropertyType;
+                if (srcType == null) break;
+                infos = info;
+            }
+
+            return infos;
         }
 
         #endregion Public Methods
@@ -170,7 +207,7 @@ namespace FilterDataGrid
         #region Private Methods
 
         public static T FindVisualChild<T>(this DependencyObject dependencyObject, string name)
-                    where T : DependencyObject
+            where T : DependencyObject
         {
             // Search immediate children first (breadth-first)
             var childrenCount = VisualTreeHelper.GetChildrenCount(dependencyObject);
@@ -198,7 +235,8 @@ namespace FilterDataGrid
             return null;
         }
 
-        private static IEnumerable<T> GetChildrenOf<T>(this DependencyObject obj, bool recursive) where T : DependencyObject
+        private static IEnumerable<T> GetChildrenOf<T>(this DependencyObject obj, bool recursive)
+            where T : DependencyObject
         {
             var count = VisualTreeHelper.GetChildrenCount(obj);
             for (var i = 0; i < count; i++)
