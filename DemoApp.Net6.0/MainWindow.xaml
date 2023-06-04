@@ -114,6 +114,11 @@
                     IsColumnFiltered="True" />
 
                 <control:DataGridTextColumn
+                    Binding="{Binding Address.PostalCode}"
+                    Header="PostalCode"
+                    IsColumnFiltered="True"/>
+
+                <control:DataGridTextColumn
                     Binding="{Binding Age}"
                     Header="Age"
                     IsColumnFiltered="True" />

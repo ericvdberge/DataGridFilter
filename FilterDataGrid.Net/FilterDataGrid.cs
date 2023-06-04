@@ -28,6 +28,9 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using static System.Net.Mime.MediaTypeNames;
 
+// ReSharper disable UseNameofForDependencyProperty
+// ReSharper disable ConvertIfStatementToNullCoalescingAssignment
+
 namespace FilterDataGrid
 {
     /// <summary>
@@ -44,12 +47,12 @@ namespace FilterDataGrid
         {
             DefaultStyleKey = typeof(FilterDataGrid);
 
-            Debug.WriteLineIf(DebugMode, "Constructor");
+            Debug.WriteLineIf(DebugMode, "FilterDataGrid.Constructor");
 
             // load resources
             var resourceDictionary = new ResourceDictionary
             {
-                Source = new Uri("/FilterDataGrid;component/Themes/FilterDataGrid.xaml", UriKind.Relative)
+                Source = new Uri("/FilterDataGrid;component/Themes/Generic.xaml", UriKind.Relative)
             };
 
             Resources.MergedDictionaries.Add(resourceDictionary);
@@ -96,7 +99,7 @@ namespace FilterDataGrid
                 new PropertyMetadata("*"));
 
         /// <summary>
-        ///     date format displayed
+        ///     Date format displayed
         /// </summary>
         public static readonly DependencyProperty DateFormatStringProperty =
             DependencyProperty.Register("DateFormatString",
@@ -204,7 +207,7 @@ namespace FilterDataGrid
         }
 
         /// <summary>
-        ///     String begins with the specified character. Used in popup searchBox
+        ///     The string begins with the specific character. Used in pop-up search box
         /// </summary>
         public bool StartsWith
         {
@@ -296,7 +299,7 @@ namespace FilterDataGrid
             set
             {
                 treeView = value;
-                OnPropertyChanged(nameof(TreeViewItems));
+                OnPropertyChanged();
             }
         }
 
@@ -309,7 +312,7 @@ namespace FilterDataGrid
             set
             {
                 listBoxItems = value;
-                OnPropertyChanged(nameof(ListBoxItems));
+                OnPropertyChanged();
             }
         }
 
@@ -351,7 +354,8 @@ namespace FilterDataGrid
         /// Popup source collection (ListBox/TreeView)
         /// </summary>
         private IEnumerable<FilterItem> SourcePopupViewItems =>
-            ItemCollectionView?.SourceCollection.OfType<FilterItem>().Where(c => c.Level != 0) ?? new List<FilterItem>();
+            ItemCollectionView?.SourceCollection.OfType<FilterItem>().Where(c => c.Level != 0) ??
+            new List<FilterItem>();
 
         #endregion Private Properties
 
@@ -420,14 +424,21 @@ namespace FilterDataGrid
                 if (fieldType == typeof(DateTime) && !string.IsNullOrEmpty(DateFormatString))
                     column.Binding.StringFormat = DateFormatString;
 
-                bool includeColumn = includeFields.Any(c => string.Equals(c, column.Header.ToString().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) ||
+                bool includeColumn = includeFields.Any(c => string.Equals(c, e.PropertyName, StringComparison.CurrentCultureIgnoreCase)) ||
                                      includeFields.Contains("*"); // * = include all fields, and is the default value
 
-                if (!includeColumn)
+                // if the type does not belong to the "System" namespace, disable sorting (excludes nested objects)
+                if (!fieldType.IsSystemType())
+                {
+                    column.CanUserSort = false;
+                }
+
+                // add the "DataGridHeaderTemplate" template if the field is not excluded 
+                if (!fieldType.IsSystemType() || !includeColumn)
                 {
                     column.Visibility = Visibility.Collapsed;
                 }
-                if (includeColumn)
+                else
                 {
                     column.Visibility = Visibility.Visible;
                 }
@@ -484,7 +495,7 @@ namespace FilterDataGrid
                 ItemsSourceCount = Items.Count;
                 ElapsedTime = new TimeSpan(0, 0, 0);
                 OnPropertyChanged(nameof(ItemsSourceCount));
-               
+
                 // Calculate row header width
                 if (ShowRowsCount)
                 {
@@ -497,7 +508,8 @@ namespace FilterDataGrid
                         Margin = new Thickness(2.0)
                     };
                     txt.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                    RowHeaderWidth =  Math.Max(Math.Ceiling(txt.DesiredSize.Width), RowHeaderWidth >=0 ? RowHeaderWidth:0);
+                    RowHeaderWidth = Math.Max(Math.Ceiling(txt.DesiredSize.Width),
+                        RowHeaderWidth >= 0 ? RowHeaderWidth : 0);
                 }
                 else
                 {
@@ -635,7 +647,7 @@ namespace FilterDataGrid
                 {
                     new FilterItemDate
                     {
-                       Label = Translate.All, Level = 0, Initialize = true, FieldType = fieldType
+                        Label = Translate.All, Level = 0, Initialize = true, FieldType = fieldType
                     }
                 };
 
@@ -715,6 +727,7 @@ namespace FilterDataGrid
                     y.Initialize = y.IsChecked;
                     tree.Add(y);
                 }
+
                 // last empty item if exist in collection
                 if (dateTimes.Any(d => d.Level == -1))
                 {
@@ -733,6 +746,7 @@ namespace FilterDataGrid
                             }
                         );
                 }
+
                 tree.First().Tree = tree;
                 return tree;
             }
@@ -746,7 +760,7 @@ namespace FilterDataGrid
         /// <summary>
         ///     Handle Mousedown, contribution : WORDIBOI
         /// </summary>
-        private readonly MouseButtonEventHandler onMousedown = (o, eArgs) => { eArgs.Handled = true; };
+        private readonly MouseButtonEventHandler onMousedown = (_, eArgs) => { eArgs.Handled = true; };
 
         /// <summary>
         ///     Generate custom columns that can be filtered
@@ -758,11 +772,12 @@ namespace FilterDataGrid
             try
             {
                 // get the columns that can be filtered
+                // ReSharper disable MergeIntoPattern
                 var columns = Columns
                     .Where(c => (c is DataGridTextColumn dtx && dtx.IsColumnFiltered)
                                 || (c is DataGridTemplateColumn dtp && dtp.IsColumnFiltered)
                                 || (c is DataGridCheckBoxColumn dcb && dcb.IsColumnFiltered)
-                                )
+                    )
                     .Select(c => c)
                     .ToList();
 
@@ -831,11 +846,11 @@ namespace FilterDataGrid
 
                         if (columnType == typeof(DataGridCheckBoxColumn))
                         {
-                            // DataGridCheckBoxColumn has no culture property
                             var column = (DataGridCheckBoxColumn)col;
 
                             column.FieldName = ((Binding)column.Binding).Path.Path;
 
+                            // culture
                             if (((Binding)column.Binding).ConverterCulture == null)
                                 ((Binding)column.Binding).ConverterCulture = Translate.Culture;
 
@@ -1050,7 +1065,6 @@ namespace FilterDataGrid
                 // clear resources
                 ItemCollectionView = System.Windows.Data.CollectionViewSource.GetDefaultView(new object());
                 CurrentFilter = null;
-               // ReactivateSorting();
                 ResetCursor();
             }
 
@@ -1091,7 +1105,6 @@ namespace FilterDataGrid
             {
                 foreach (var col in Columns)
                 {
-
                     // ReSharper disable MergeIntoPattern
 
                     // .NET Framework all C# 7.3
@@ -1100,25 +1113,27 @@ namespace FilterDataGrid
                     switch (col)
                     {
                         case DataGridTextColumn column:
-                            fieldName = column.FieldName;
+                            CurrentFilter =
+                                GlobalFilterList.FirstOrDefault(c => c.FieldName == column.FieldName && c.IsFiltered);
                             break;
 
                         case DataGridTemplateColumn column:
-                            fieldName = column.FieldName;
+                            CurrentFilter =
+                                GlobalFilterList.FirstOrDefault(c => c.FieldName == column.FieldName && c.IsFiltered);
                             break;
 
                         case DataGridCheckBoxColumn column:
-                            fieldName = column.FieldName;
+                            CurrentFilter =
+                                GlobalFilterList.FirstOrDefault(c => c.FieldName == column.FieldName && c.IsFiltered);
                             break;
 
                         case null:
                             continue;
                     }
 
-                    if (string.IsNullOrEmpty(fieldName)) continue;
+                    if (CurrentFilter == null) continue;
 
-                    CurrentFilter = GlobalFilterList.FirstOrDefault(c => c.FieldName == fieldName);
-                    if (CurrentFilter != null) RemoveCurrentFilter();
+                    RemoveCurrentFilter();
                 }
             }
             catch (Exception ex)
@@ -1195,12 +1210,14 @@ namespace FilterDataGrid
 
             // Contains
             if (!StartsWith)
-                return Translate.Culture.CompareInfo.IndexOf(content ?? string.Empty, searchText, CompareOptions.OrdinalIgnoreCase) >= 0;
+                return Translate.Culture.CompareInfo.IndexOf(content ?? string.Empty, searchText,
+                    CompareOptions.OrdinalIgnoreCase) >= 0;
 
             // StartsWith preserve RangeOverflow
             if (searchLength > item.ContentLength) return false;
 
-            return Translate.Culture.CompareInfo.IndexOf(content ?? string.Empty, searchText, 0, searchLength, CompareOptions.OrdinalIgnoreCase) >= 0;
+            return Translate.Culture.CompareInfo.IndexOf(content ?? string.Empty, searchText, 0, searchLength,
+                CompareOptions.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>
@@ -1219,7 +1236,7 @@ namespace FilterDataGrid
             searchLength = searchText.Length;
             search = !string.IsNullOrEmpty(searchText);
 
-            // apply filter
+            // apply filter (call the SearchFilter method)
             ItemCollectionView.Refresh();
 
             if (CurrentFilter.FieldType == typeof(DateTime))
@@ -1248,6 +1265,7 @@ namespace FilterDataGrid
                 {
                     ListBoxItems = PopupViewItems.Where(i => i.IsChecked).ToList();
                 }
+
             }
         }
 
@@ -1330,24 +1348,18 @@ namespace FilterDataGrid
                 {
                     var column = (DataGridTextColumn)header.Column;
                     fieldName = column.FieldName;
-                    //column.CanUserSort = false;
-                    //currentColumn = column;
                 }
 
                 if (columnType == typeof(DataGridTemplateColumn))
                 {
                     var column = (DataGridTemplateColumn)header.Column;
                     fieldName = column.FieldName;
-                    //column.CanUserSort = false;
-                    //currentColumn = column;
                 }
 
                 if (columnType == typeof(DataGridCheckBoxColumn))
                 {
                     var column = (DataGridCheckBoxColumn)header.Column;
                     fieldName = column.FieldName;
-                    //column.CanUserSort = false;
-                    //currentColumn = column;
                 }
 
                 // invalid fieldName
@@ -1355,7 +1367,8 @@ namespace FilterDataGrid
                 
                 // get type of field
                 fieldType = null;
-                var fieldProperty = Extensions.GetPropertyInfo(collectionType, fieldName);
+
+                var fieldProperty = collectionType.GetPropertyInfo(fieldName);
 
                 // get type or underlying type if nullable
                 if (fieldProperty != null)
@@ -1393,7 +1406,7 @@ namespace FilterDataGrid
                     else
                     {
                         sourceObjectList = ItemsSource.Cast<object>()
-                                .Select(x => fieldProperty?.GetValue(x, null))
+                                .Select(x => Extensions.GetPropertyValue(x, fieldName))
                                 .Where(x => x != null)
                                 .Distinct()
                                 .ToList();
@@ -1451,7 +1464,7 @@ namespace FilterDataGrid
                             Label = Translate.Empty,
                             Level = -1,
                             Initialize = ItemsSource.Cast<object>()
-                                                    .Select(x => fieldProperty?.GetValue(x, null))
+                                                    .Select(x => Extensions.GetPropertyValue(x, fieldName))
                                                     .Contains(null)
                         });
                     }
@@ -1499,7 +1512,8 @@ namespace FilterDataGrid
                 // show open popup elapsed time in UI
                 ElapsedTime = stopWatchFilter.Elapsed;
 
-                Debug.WriteLineIf(DebugMode, $"FilterDataGrid.ShowFilterCommand Elapsed time : {ElapsedTime:mm\\:ss\\.ff}");
+                Debug.WriteLineIf(DebugMode,
+                    $"FilterDataGrid.ShowFilterCommand Elapsed time : {ElapsedTime:mm\\:ss\\.ff}");
             }
         }
 
@@ -1641,7 +1655,7 @@ namespace FilterDataGrid
                     // contributing to the fix : VASHBALDEUS
                     if (popup.HorizontalOffset == 0)
                         grid.MaxWidth = MaxSize(Math.Abs(grid.MaxWidth - offset));
-                    
+
                     // the height of popup is too large, reduce it, because it overflows down.
                     if (delta.Y <= 0d)
                     {
@@ -1649,7 +1663,7 @@ namespace FilterDataGrid
                         grid.Height = grid.MaxHeight;
 
                         // contributing to the fix : VASHBALDEUS
-                        grid.MinHeight = grid.MaxHeight == 0 ? grid.MinHeight : grid.MaxHeight; 
+                        grid.MinHeight = grid.MaxHeight == 0 ? grid.MinHeight : grid.MaxHeight;
                     }
                 }
             }

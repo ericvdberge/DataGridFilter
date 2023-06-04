@@ -13,12 +13,12 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.Serialization;
-
+using System.Windows.Controls;
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace FilterDataGrid
 {
-    public sealed class FilterCommon : NotifyProperty, ISerializable
+    public sealed class FilterCommon : NotifyProperty
     {
         #region Private Fields
 
@@ -34,16 +34,11 @@ namespace FilterDataGrid
             Criteria = new HashSet<Predicate<object>>();
         }
 
-        protected FilterCommon(SerializationInfo info, StreamingContext context)
-        {
-            FieldName = info.GetString(nameof(FieldName));
-            FilteredItems = new HashSet<object>((object[])info.GetValue(nameof(FilteredItems), typeof(object[])));
-            IsFiltered = info.GetBoolean(nameof(IsFiltered));
-        }
-
         #endregion Public Constructors
 
         #region Public Properties
+
+        public Button FilterButton { get; set; }
 
         public string FieldName { get; set; }
 
@@ -51,19 +46,19 @@ namespace FilterDataGrid
 
         public PropertyInfo FieldProperty { get; set; }
 
+        public HashSet<object> FilteredItems { get; set; }
+
+        public HashSet<Predicate<object>> Criteria { get; set; }
+
         public bool IsFiltered
         {
             get => isFiltered;
             set
             {
                 isFiltered = value;
-                OnPropertyChanged("IsFiltered");
+                OnPropertyChanged(nameof(IsFiltered));
             }
         }
-
-        public HashSet<object> FilteredItems { get; set; }
-
-        public HashSet<Predicate<object>> Criteria { get; set; }
 
         public Loc Translate { get; set; }
 
@@ -100,13 +95,6 @@ namespace FilterDataGrid
             Criteria.Clear();
             isFiltered = false;
             return true;
-        }
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue(nameof(FieldName), FieldName);
-            info.AddValue(nameof(FilteredItems), FilteredItems);
-            info.AddValue(nameof(IsFiltered), IsFiltered);
         }
 
         #endregion Public Methods

@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)ModelView\DelegateCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ModelView\ModelView.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ModelView\RandomGenerator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Model\Address.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Model\Employe.cs" />
   </ItemGroup>
 </Project>

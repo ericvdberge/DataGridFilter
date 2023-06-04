@@ -98,6 +98,11 @@ namespace SharedModelView.ModelView
             "Simmons", "Foster", "Gonzales", "Bryant", "Alexander", "Russell", "Griffin", "Diaz", "Hayes", "", null
         };
 
+        private static readonly string[] PostalCodes =
+        {
+            "5509 AW", "5780 TD"
+        };
+
         private static readonly Random Rnd;
         private static readonly string[] Vowels = { "a", "e", "i", "o", "u", "y" };
 
@@ -119,11 +124,20 @@ namespace SharedModelView.ModelView
                 // first name
                 FirstNames[Rnd.Next(FirstNames.Length)],
 
+                new Address()
+                {
+                    Street = "street 1",
+                    HouseNumber = 22,
+                    PostalCode = PostalCodes[Rnd.Next(PostalCodes.Length)]
+                },
+
                 // salary
                 Math.Round(Rnd.NextDouble() * (300 - 100) + 100, 1),
 
                 // age
                 Rnd.Next(18, 75) * 1,
+
+                // do not remove cast (DateTime?/bool?) to ensure compatibility with the C# version of the 4.8 NetFramework
 
                 // start date + time
                 Rnd.Next(0, 10) != 1
@@ -131,8 +145,9 @@ namespace SharedModelView.ModelView
                         Rnd.Next(59))
                     : (DateTime?)null,
 
-                // is manager
-                Rnd.Next() % 2 == 1);
+                // is manager (three states)
+                (Rnd.Next() % 3 == 2) ? (bool?)null : Rnd.Next() % 2 == 1
+            );
             return emp;
         }
 

@@ -23,33 +23,29 @@ using System;
 
 namespace SharedModelView
 {
-    public class Employe
+    public class Address
     {
         #region Public Constructors
 
-        public Employe(string lastName, string firstName, Address address, double? salary, int? age, DateTime? startDate,
-            bool? manager = false)
+        public Address()
         {
-            LastName = lastName;
-            FirstName = firstName;
-            Salary = salary;
-            Age = age;
-            StartDate = startDate;
-            Manager = manager;
-            Address = address;
+            
+        }
+
+        public Address(string street, int houseNumber, string postalCode)
+        {
+            Street = street;
+            HouseNumber = houseNumber;
+            PostalCode = postalCode;
         }
 
         #endregion Public Constructors
 
         #region Public Properties
 
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public bool? Manager { get; set; }
-        public double? Salary { get; set; }
-        public int? Age { get; set; }
-        public DateTime? StartDate { get; set; }
-        public Address Address { get; set; }
+        public string Street { get; set; }
+        public int HouseNumber { get; set; }
+        public string PostalCode { get; set; }
 
         #endregion Public Properties
     }
