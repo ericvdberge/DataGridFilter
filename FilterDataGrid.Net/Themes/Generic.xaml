@@ -482,7 +482,6 @@
                 IsOpen="False"
                 PlacementTarget="{Binding ElementName=ContainerFilterGrid}"
                 StaysOpen="{StaticResource StayOpen}">
-
                 <Border
                     x:Name="PopUpBorder"
                     Padding="0"
@@ -497,7 +496,8 @@
                         MinWidth="{StaticResource PopupWidth}"
                         MinHeight="{StaticResource PopupHeight}"
                         ShowGridLines="False"
-                        ZIndex="1">
+                        ZIndex="1"
+                        Background="White">
 
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" MinWidth="32" />
