@@ -786,7 +786,7 @@ namespace FilterDataGrid
                 {
                     var columnType = col.GetType();
 
-                    bool includeColumn = includeFields.Any(c => string.Equals(c, (col as DataGridTextColumn)?.FieldName, StringComparison.CurrentCultureIgnoreCase)) || 
+                    bool includeColumn = includeFields.Any(c => string.Equals(c, (col as DataGridTextColumn)?.SortMemberPath, StringComparison.CurrentCultureIgnoreCase)) || 
                                          includeFields.Contains("*"); // * = include all fields, and is the default value
                     
                     if (!includeColumn)
@@ -816,7 +816,7 @@ namespace FilterDataGrid
                             column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
 
                             fieldType = null;
-                            var fieldProperty = collectionType.GetProperty(((Binding)column.Binding).Path.Path);
+                            var fieldProperty = collectionType.GetPropertyInfo((col as DataGridTextColumn).SortMemberPath);
 
                             // get type or underlying type if nullable
                             if (fieldProperty != null)
