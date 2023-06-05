@@ -786,7 +786,7 @@ namespace FilterDataGrid
                 {
                     var columnType = col.GetType();
 
-                    bool includeColumn = includeFields.Any(c => string.Equals(c, (col as DataGridTextColumn)?.FieldName, StringComparison.CurrentCultureIgnoreCase)) || 
+                    bool includeColumn = includeFields.Any(c => string.Equals(c, (col as DataGridTextColumn).FieldName, StringComparison.CurrentCultureIgnoreCase)) || 
                                          includeFields.Contains("*"); // * = include all fields, and is the default value
                     
                     if (!includeColumn)
@@ -816,7 +816,7 @@ namespace FilterDataGrid
                             column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
 
                             fieldType = null;
-                            var fieldProperty = collectionType.GetPropertyInfo((col as DataGridTextColumn)?.FieldName);
+                            var fieldProperty = collectionType.GetPropertyInfo((col as DataGridTextColumn).FieldName);
 
                             // get type or underlying type if nullable
                             if (fieldProperty != null)
@@ -1398,16 +1398,16 @@ namespace FilterDataGrid
                     if (fieldType == typeof(DateTime))
                     {
                         sourceObjectList = ItemsSource.Cast<object>()
-                                .Select(x => (object)FilterHelper.GetPropertyValue<DateTime?>(x, fieldName)?.Date)
                                 .Where(x => x != null)
+                                .Select(x => (object)FilterHelper.GetPropertyValue<DateTime?>(x, fieldName)?.Date)
                                 .Distinct()
                                 .ToList();
                     }
                     else
                     {
                         sourceObjectList = ItemsSource.Cast<object>()
-                                .Select(x => Extensions.GetPropertyValue(x, fieldName))
                                 .Where(x => x != null)
+                                .Select(x => Extensions.GetPropertyValue(x, fieldName))
                                 .Distinct()
                                 .ToList();
 
