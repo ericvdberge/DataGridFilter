@@ -661,7 +661,7 @@ namespace FilterDataGrid
 
                 var dateTimes = dates.ToList();
 
-                foreach (var y in dateTimes.Where(c => c.Level == 1)
+                foreach (var y in dateTimes.Where(c => c.Level == 1 && c != null)
                              .Select(filterItem => new
                              {
                                  DateTime.Parse(filterItem.Content.ToString()).Date,
@@ -786,7 +786,14 @@ namespace FilterDataGrid
                 {
                     var columnType = col.GetType();
 
-                    bool includeColumn = includeFields.Any(c => string.Equals(c, (col as DataGridTextColumn).FieldName, StringComparison.CurrentCultureIgnoreCase)) || 
+                    if (col is DataGridTextColumn)
+                        fieldName = (col as DataGridTextColumn).FieldName;
+                    if (col is DataGridTemplateColumn)
+                        fieldName = (col as DataGridTemplateColumn).FieldName;
+                    if(col is DataGridCheckBoxColumn)
+                        fieldName = (col as DataGridCheckBoxColumn).FieldName;
+
+                    bool includeColumn = includeFields.Any(c => string.Equals(c, fieldName, StringComparison.CurrentCultureIgnoreCase)) || 
                                          includeFields.Contains("*"); // * = include all fields, and is the default value
                     
                     if (!includeColumn)
@@ -1400,6 +1407,7 @@ namespace FilterDataGrid
                         sourceObjectList = ItemsSource.Cast<object>()
                                 .Where(x => x != null)
                                 .Select(x => (object)FilterHelper.GetPropertyValue<DateTime?>(x, fieldName)?.Date)
+                                .Where(x => x != null)
                                 .Distinct()
                                 .ToList();
                     }
@@ -1407,14 +1415,15 @@ namespace FilterDataGrid
                     {
                         sourceObjectList = ItemsSource.Cast<object>()
                                 .Where(x => x != null)
-                                .Select(x => x.GetPropertyValue(fieldName))
+                                .Select(x => Extensions.GetPropertyValue(x, fieldName))
+                                .Where(x => x != null)
                                 .Distinct()
                                 .ToList();
 
                         if (fieldType == typeof(string))
                             //remove empty strings
                             sourceObjectList = sourceObjectList
-                                .Where(s => !string.IsNullOrEmpty(s.ToString()))
+                                .Where(s => !string.IsNullOrEmpty((string)s))
                                 .ToList();
                     }
 
@@ -1464,7 +1473,7 @@ namespace FilterDataGrid
                             Label = Translate.Empty,
                             Level = -1,
                             Initialize = ItemsSource.Cast<object>()
-                                                    .Select(x => Extensions.GetPropertyValue(x, null))
+                                                    .Select(x => x.GetPropertyValue(fieldName))
                                                     .Contains(null)
                         });
                     }
