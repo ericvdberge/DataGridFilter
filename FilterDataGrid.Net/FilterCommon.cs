@@ -9,6 +9,7 @@
 
 #endregion (c) 2019 Gilles Macabies All right reserved
 
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -38,16 +39,20 @@ namespace FilterDataGrid
 
         #region Public Properties
 
+        [JsonIgnore]
         public Button FilterButton { get; set; }
 
         public string FieldName { get; set; }
 
+        [JsonIgnore]
         public Type FieldType { get; set; }
 
+        [JsonIgnore]
         public PropertyInfo FieldProperty { get; set; }
 
         public HashSet<object> FilteredItems { get; set; }
 
+        [JsonIgnore]
         public HashSet<Predicate<object>> Criteria { get; set; }
 
         public bool IsFiltered
@@ -60,6 +65,7 @@ namespace FilterDataGrid
             }
         }
 
+        [JsonIgnore]
         public Loc Translate { get; set; }
 
         #endregion Public Properties
