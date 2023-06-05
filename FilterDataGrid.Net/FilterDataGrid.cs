@@ -786,7 +786,7 @@ namespace FilterDataGrid
                 {
                     var columnType = col.GetType();
 
-                    bool includeColumn = includeFields.Any(c => string.Equals(c, col.Header.ToString().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) || 
+                    bool includeColumn = includeFields.Any(c => string.Equals(c, (col as DataGridTextColumn)?.FieldName, StringComparison.CurrentCultureIgnoreCase)) || 
                                          includeFields.Contains("*"); // * = include all fields, and is the default value
                     
                     if (!includeColumn)
@@ -1464,7 +1464,7 @@ namespace FilterDataGrid
                             Label = Translate.Empty,
                             Level = -1,
                             Initialize = ItemsSource.Cast<object>()
-                                                    .Select(x => Extensions.GetPropertyValue(x, fieldName))
+                                                    .Select(x => Extensions.GetPropertyValue(x, null))
                                                     .Contains(null)
                         });
                     }
