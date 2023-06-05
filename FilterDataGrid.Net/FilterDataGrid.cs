@@ -1407,7 +1407,7 @@ namespace FilterDataGrid
                     {
                         sourceObjectList = ItemsSource.Cast<object>()
                                 .Where(x => x != null)
-                                .Select(x => Extensions.GetPropertyValue(x, fieldName))
+                                .Select(x => x.GetPropertyValue(fieldName))
                                 .Distinct()
                                 .ToList();
 
