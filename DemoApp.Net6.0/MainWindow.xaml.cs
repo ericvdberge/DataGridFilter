@@ -31,6 +31,7 @@ namespace DemoApp.Net6
     /// </summary>
     public partial class MainWindow : Window
     {
+        private List<FilterCommon> _filterPreset;
         public MainWindow()
         {
             InitializeComponent();
@@ -60,26 +61,30 @@ namespace DemoApp.Net6
         private async void Button_Read_Click(object sender, RoutedEventArgs e)
         {
             FilterDataGrid.FilterPreset = new List<FilterCommon>();
-            await Task.Delay(5_000);
+            await Task.Delay(1_000);
 
             string filePath = "D:\\test\\filterpreset.json";
             var json = File.ReadAllText(filePath);
             var filterPreset = JsonConvert.DeserializeObject<List<FilterCommon>>(json);
 
-            FilterDataGrid.FilterPreset = filterPreset;
+            //FilterDataGrid.FilterPreset = filterPreset;
+            _filterPreset = filterPreset;
         }
 
         private async void Button_MemorySet_Click(object sender, RoutedEventArgs e)
         {
 
+            //FilterDataGrid.IncludeFields = "FirstName,Age,Salary";
+            //FilterDataGridAuto.IncludeFields = "FirstName,Age";
+
             FilterDataGrid.IncludeFields = "FirstName,Age";
-            FilterDataGridAuto.IncludeFields = "FirstName,Age";
+            FilterDataGrid.FilterPreset = _filterPreset;
 
 
-            await Task.Delay(5_000);
+            //await Task.Delay(5_000);
 
-            FilterDataGrid.IncludeFields = "*";
-            FilterDataGridAuto.IncludeFields = "*";
+            //FilterDataGrid.IncludeFields = "*";
+            //FilterDataGridAuto.IncludeFields = "*";
 
             //var filterPreset = FilterDataGrid.FilterPreset.ToList();
 
@@ -88,6 +93,12 @@ namespace DemoApp.Net6
 
             //FilterDataGrid.FilterPreset = filterPreset;
 
+        }
+
+        private async void Button_MemorySet2_Click(object sender, RoutedEventArgs e)
+        {
+            FilterDataGrid.IncludeFields = "*";
+            FilterDataGrid.FilterPreset = new List<FilterCommon>();
         }
     }
 }

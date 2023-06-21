@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -150,6 +151,7 @@ namespace FilterDataGrid
         public event PropertyChangedEventHandler PropertyChanged;
 
         public event EventHandler Sorted;
+        public event EventHandler FilterApplied;
 
         #endregion Public Event
 
@@ -424,7 +426,7 @@ namespace FilterDataGrid
                 if (fieldType == typeof(DateTime) && !string.IsNullOrEmpty(DateFormatString))
                     column.Binding.StringFormat = DateFormatString;
 
-                bool includeColumn = includeFields.Any(c => string.Equals(c, e.PropertyName, StringComparison.CurrentCultureIgnoreCase)) ||
+                bool includeColumn = includeFields.Any(c => string.Equals(c, column.FieldName, StringComparison.CurrentCultureIgnoreCase)) ||
                                      includeFields.Contains("*"); // * = include all fields, and is the default value
 
                 // if the type does not belong to the "System" namespace, disable sorting (excludes nested objects)
@@ -570,7 +572,6 @@ namespace FilterDataGrid
 
             foreach (FilterCommon filter in filterPreset.ToList())
             {
-
                 PropertyInfo fieldProperty = ItemsSource.Cast<object>()?
                                                .FirstOrDefault()?
                                                .GetType()
@@ -611,15 +612,27 @@ namespace FilterDataGrid
 
                     foreach(DataGridColumn column in Columns)
                     {
-                        column.Visibility = Visibility.Collapsed;
+                        string fieldName = string.Empty;
+                        if (column is IFilteredDatagridColumn)
+                            fieldName = (column as IFilteredDatagridColumn).FieldName;
+
+                        if (includeFields.Contains(fieldName))
+                        {
+                            column.Visibility = Visibility.Visible;
+                            OnAutoGeneratingColumn(new DataGridAutoGeneratingColumnEventArgs(fieldName, column.GetType(), column));
+                        }
+                        else
+                        {
+                            column.Visibility = Visibility.Collapsed;
+                        }
                     }
 
-                    foreach (var propertyName in includeFields)
-                    {
-                        var column = new DataGridTextColumn {  Header = propertyName, Binding = new Binding(propertyName) };
-                        OnAutoGeneratingColumn(new DataGridAutoGeneratingColumnEventArgs(propertyName, column.GetType(), column));
-                        column.Visibility = Visibility.Visible;
-                    }
+                    //foreach (var propertyName in includeFields)
+                    //{
+                    //    var column = new DataGridTextColumn {  Header = propertyName, Binding = new Binding(propertyName) };
+                    //    OnAutoGeneratingColumn(new DataGridAutoGeneratingColumnEventArgs(propertyName, column.GetType(), column));
+                    //    column.Visibility = Visibility.Visible;
+                    //}
 
                     // Refresh the UI by updating the ItemsSource property
                     var itemsSource = ItemsSource;
@@ -774,10 +787,7 @@ namespace FilterDataGrid
                 // get the columns that can be filtered
                 // ReSharper disable MergeIntoPattern
                 var columns = Columns
-                    .Where(c => (c is DataGridTextColumn dtx && dtx.IsColumnFiltered)
-                                || (c is DataGridTemplateColumn dtp && dtp.IsColumnFiltered)
-                                || (c is DataGridCheckBoxColumn dcb && dcb.IsColumnFiltered)
-                    )
+                    .Where(c => (c is IFilteredDatagridColumn dtx && dtx.IsColumnFiltered))
                     .Select(c => c)
                     .ToList();
 
@@ -786,44 +796,29 @@ namespace FilterDataGrid
                 {
                     var columnType = col.GetType();
 
-                    if (col is DataGridTextColumn)
-                        fieldName = (col as DataGridTextColumn).FieldName;
-                    if (col is DataGridTemplateColumn)
-                        fieldName = (col as DataGridTemplateColumn).FieldName;
-                    if(col is DataGridCheckBoxColumn)
-                        fieldName = (col as DataGridCheckBoxColumn).FieldName;
-
-                    bool includeColumn = includeFields.Any(c => string.Equals(c, fieldName, StringComparison.CurrentCultureIgnoreCase)) || 
-                                         includeFields.Contains("*"); // * = include all fields, and is the default value
-                    
-                    if (!includeColumn)
-                    {
-                        col.Visibility = Visibility.Collapsed;
-                        continue;
-                    }
-                    if(includeColumn)
-                    {
-                        col.Visibility = Visibility.Visible;
-                    }
-
                     if (col.HeaderTemplate != null)
                     {
                         // reset filter Button
                         var button = VisualTreeHelpers.GetHeader(col, this)
                             ?.FindVisualChild<Button>("FilterButton");
-                        if (button != null) FilterState.SetIsFiltered(button, CurrentFilter?.IsFiltered ?? false);
+                        bool isFiltered = GlobalFilterList.FirstOrDefault(f => f.FieldName == (col as IFilteredDatagridColumn).FieldName)?.IsFiltered ?? false;
+                        if (button != null) FilterState.SetIsFiltered(button, isFiltered);
                     }
                     else
                     {
                         if (columnType == typeof(DataGridTextColumn))
                         {
                             var column = (DataGridTextColumn)col;
+                            if (column == null) continue;
 
                             // template
                             column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
 
                             fieldType = null;
-                            var fieldProperty = collectionType.GetPropertyInfo((col as DataGridTextColumn).FieldName);
+                            fieldName = col is IFilteredDatagridColumn ? (col as IFilteredDatagridColumn).FieldName : null;
+                            PropertyInfo fieldProperty = null;
+                            if(fieldName != null)
+                                fieldProperty = Extensions.GetPropertyInfo(column.GetType(), fieldName);
 
                             // get type or underlying type if nullable
                             if (fieldProperty != null)
@@ -864,6 +859,22 @@ namespace FilterDataGrid
                             // template
                             column.HeaderTemplate = (DataTemplate)TryFindResource("DataGridHeaderTemplate");
                         }
+                    }
+
+                    if (col is IFilteredDatagridColumn)
+                        fieldName = (col as IFilteredDatagridColumn).FieldName;
+
+                    bool includeColumn = includeFields.Any(c => string.Equals(c, fieldName.Trim().Replace(" ", ""), StringComparison.CurrentCultureIgnoreCase)) ||
+                                         includeFields.Contains("*"); // * = include all fields, and is the default value
+
+                    if (includeColumn)
+                    {
+                        col.Visibility = Visibility.Visible;
+                       
+                    }
+                    else
+                    {
+                        col.Visibility = Visibility.Collapsed;
                     }
                 }
             }
@@ -1113,29 +1124,14 @@ namespace FilterDataGrid
                 foreach (var col in Columns)
                 {
                     // ReSharper disable MergeIntoPattern
-
-                    // .NET Framework all C# 7.3
-                    // 'recursive patterns' is not available on .NET Framework 4.8. Only in version C# 8.0 or greater.
-
-                    switch (col)
+                    if(col is IFilteredDatagridColumn)
                     {
-                        case DataGridTextColumn column:
-                            CurrentFilter =
-                                GlobalFilterList.FirstOrDefault(c => c.FieldName == column.FieldName && c.IsFiltered);
-                            break;
-
-                        case DataGridTemplateColumn column:
-                            CurrentFilter =
-                                GlobalFilterList.FirstOrDefault(c => c.FieldName == column.FieldName && c.IsFiltered);
-                            break;
-
-                        case DataGridCheckBoxColumn column:
-                            CurrentFilter =
-                                GlobalFilterList.FirstOrDefault(c => c.FieldName == column.FieldName && c.IsFiltered);
-                            break;
-
-                        case null:
-                            continue;
+                        CurrentFilter =
+                                GlobalFilterList.FirstOrDefault(c => c.FieldName == (col as IFilteredDatagridColumn).FieldName);
+                    }
+                    else
+                    {
+                        continue;
                     }
 
                     if (CurrentFilter == null) continue;
@@ -1162,14 +1158,11 @@ namespace FilterDataGrid
             if(popup != null) popup.IsOpen = false; // raise PopupClosed event
 
             // set button icon (filtered or not)
-            var col = Columns.FirstOrDefault(c => (c is DataGridTextColumn dtx && dtx.IsColumnFiltered && dtx.FieldName == CurrentFilter?.FieldName)
-                                || (c is DataGridTemplateColumn dtp && dtp.IsColumnFiltered && dtp.FieldName == CurrentFilter?.FieldName)
-                                || (c is DataGridCheckBoxColumn dcb && dcb.IsColumnFiltered && dcb.FieldName == CurrentFilter?.FieldName)
-                                );
+            var col = Columns.FirstOrDefault(c => c is IFilteredDatagridColumn dtx && dtx.FieldName == CurrentFilter.FieldName);
             if (col == null) return;
             Button button = VisualTreeHelpers.GetHeader(col, this)
                 ?.FindVisualChild<Button>("FilterButton");
-            FilterState.SetIsFiltered(button, false);
+            if(button != null) FilterState.SetIsFiltered(button, false);
 
             ElapsedTime = new TimeSpan(0, 0, 0);
             stopWatchFilter = Stopwatch.StartNew();
@@ -1297,7 +1290,6 @@ namespace FilterDataGrid
             {
                 // filter button
                 Button button = (Button)e.OriginalSource;
-                if (button == null) return;
 
                 // contribution : OTTOSSON
                 // for the moment this functionality is not tested, I do not know if it can cause unexpected effects
@@ -1351,21 +1343,9 @@ namespace FilterDataGrid
                 thumb.DragStarted += OnResizeThumbDragStarted;
 
                 // get field name from binding Path
-                if (columnType == typeof(DataGridTextColumn))
+                if (header.Column is IFilteredDatagridColumn)
                 {
-                    var column = (DataGridTextColumn)header.Column;
-                    fieldName = column.FieldName;
-                }
-
-                if (columnType == typeof(DataGridTemplateColumn))
-                {
-                    var column = (DataGridTemplateColumn)header.Column;
-                    fieldName = column.FieldName;
-                }
-
-                if (columnType == typeof(DataGridCheckBoxColumn))
-                {
-                    var column = (DataGridCheckBoxColumn)header.Column;
+                    var column = (IFilteredDatagridColumn)header.Column;
                     fieldName = column.FieldName;
                 }
 
@@ -1406,7 +1386,7 @@ namespace FilterDataGrid
                     {
                         sourceObjectList = ItemsSource.Cast<object>()
                                 .Where(x => x != null)
-                                .Select(x => (object)FilterHelper.GetPropertyValue<DateTime?>(x, fieldName)?.Date)
+                                .Select(x => (object)((DateTime?)x.GetPropertyValue(fieldName))?.Date)
                                 .Where(x => x != null)
                                 .Distinct()
                                 .ToList();
@@ -1547,8 +1527,8 @@ namespace FilterDataGrid
             {
                 try
                 {
-                    Task.Run(() =>
-                    {
+                    //Task.Run(() =>
+                    //{
                         bool frontendFilterChanged = PopupViewItems.Any(c => c.IsChanged);
                         if (frontendFilterChanged || search)
                         {
@@ -1566,7 +1546,14 @@ namespace FilterDataGrid
 
                         // set the current field name as the last filter name
                         lastFilter = CurrentFilter.FieldName;
-                    }).Wait();
+                    //}).Wait();
+
+                    // set button icon (filtered or not)
+                    var col = Columns.FirstOrDefault(c => c is IFilteredDatagridColumn dtx && dtx.FieldName == lastFilter);
+                    if (col == null) return;
+                    Button button = VisualTreeHelpers.GetHeader(col, this)
+                        ?.FindVisualChild<Button>("FilterButton");
+                    if (button != null) FilterState.SetIsFiltered(button, true);
 
                     // apply filter
                     CollectionViewSource.Refresh();
@@ -1575,14 +1562,10 @@ namespace FilterDataGrid
                     if (!CurrentFilter.FilteredItems.Any())
                         RemoveCurrentFilter();
 
-                    var col = Columns.FirstOrDefault(c => (c is DataGridTextColumn dtx && dtx.IsColumnFiltered && dtx.FieldName == CurrentFilter?.FieldName)
-                                || (c is DataGridTemplateColumn dtp && dtp.IsColumnFiltered && dtp.FieldName == CurrentFilter?.FieldName)
-                                || (c is DataGridCheckBoxColumn dcb && dcb.IsColumnFiltered && dcb.FieldName == CurrentFilter?.FieldName)
-                                );
-                    if (col == null) return;
-                    Button button = VisualTreeHelpers.GetHeader(col, this)
-                        ?.FindVisualChild<Button>("FilterButton");
-                    FilterState.SetIsFiltered(button, CurrentFilter?.IsFiltered ?? false);
+                    if(FilterApplied != null) FilterApplied?.Invoke(this, null);
+
+
+
                 }
                 catch (Exception ex)
                 {

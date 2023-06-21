@@ -15,7 +15,13 @@ using System.Windows;
 
 namespace FilterDataGrid
 {
-    public sealed class DataGridTemplateColumn : System.Windows.Controls.DataGridTemplateColumn
+    public interface IFilteredDatagridColumn
+    {
+        public string FieldName { get; set; }
+        public bool IsColumnFiltered { get; set; }
+    }
+
+    public sealed class DataGridTemplateColumn : System.Windows.Controls.DataGridTemplateColumn, IFilteredDatagridColumn
     {
         #region Public Fields
 
@@ -52,7 +58,7 @@ namespace FilterDataGrid
         #endregion Public Properties
     }
 
-    public sealed class DataGridTextColumn : System.Windows.Controls.DataGridTextColumn
+    public sealed class DataGridTextColumn : System.Windows.Controls.DataGridTextColumn, IFilteredDatagridColumn
     {
         #region Public Fields
 
@@ -89,7 +95,7 @@ namespace FilterDataGrid
         #endregion Public Properties
     }
 
-    public sealed class DataGridCheckBoxColumn : System.Windows.Controls.DataGridCheckBoxColumn
+    public sealed class DataGridCheckBoxColumn : System.Windows.Controls.DataGridCheckBoxColumn, IFilteredDatagridColumn
     {
         #region Public Fields
 

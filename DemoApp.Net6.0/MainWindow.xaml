@@ -173,6 +173,7 @@
             <Button  FontSize="20" Click="Button_Write_Click" Width="200">Write</Button>
             <Button  FontSize="20" Click="Button_Read_Click" Width="200">Load</Button>
             <Button  FontSize="20" Click="Button_MemorySet_Click" Width="200">Memory set</Button>
+            <Button  FontSize="20" Click="Button_MemorySet2_Click" Width="200">Memory set 2</Button>
         </StackPanel>
     </Grid>
 </Window>
