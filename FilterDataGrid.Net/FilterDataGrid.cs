@@ -395,6 +395,12 @@ namespace FilterDataGrid
             }
         }
 
+        protected override void OnSelectionChanged(SelectionChangedEventArgs e)
+        {
+            e.Handled = true;
+            base.OnSelectionChanged(e);
+        }
+
         /// <summary>
         ///     Auto generated column, set templateHeader
         /// </summary>
@@ -1265,7 +1271,6 @@ namespace FilterDataGrid
                 {
                     ListBoxItems = PopupViewItems.Where(i => i.IsChecked).ToList();
                 }
-
             }
         }
 
@@ -1380,12 +1385,23 @@ namespace FilterDataGrid
                 await Task.Run(() =>
                 {
                     // gather all values that are in the column of a certain fieldName
-                    List<object> sourceObjectList = null;
+                    IEnumerable<string> filteredFieldNames = GlobalFilterList.Select(x => x.FieldName);
+                    List<object> sourceObjectList = ItemsSource.Cast<object>()
+                                .Where(x => x != null)
+                                .Where(x =>
+                                    filteredFieldNames.All(
+                                        fieldName => GlobalFilterList
+                                            .FirstOrDefault(c => c.FieldName == fieldName)
+                                            .FilteredItems
+                                            .Contains(Extensions.GetPropertyValue(x, fieldName))
+                                    ) ||
+                                    filteredFieldNames.Count() == 0
+                                 ).ToList();
                     
+
                     if (fieldType == typeof(DateTime))
                     {
-                        sourceObjectList = ItemsSource.Cast<object>()
-                                .Where(x => x != null)
+                        sourceObjectList = sourceObjectList
                                 .Select(x => (object)((DateTime?)x.GetPropertyValue(fieldName))?.Date)
                                 .Where(x => x != null)
                                 .Distinct()
@@ -1393,8 +1409,7 @@ namespace FilterDataGrid
                     }
                     else
                     {
-                        sourceObjectList = ItemsSource.Cast<object>()
-                                .Where(x => x != null)
+                        sourceObjectList = sourceObjectList
                                 .Select(x => Extensions.GetPropertyValue(x, fieldName))
                                 .Where(x => x != null)
                                 .Distinct()
@@ -1457,6 +1472,14 @@ namespace FilterDataGrid
                                                     .Contains(null)
                         });
                     }
+                    
+                    //lock(ItemsSource)
+                    //{
+                    //    Dispatcher?.Invoke(() =>
+                    //    {
+                    //        ItemsSource = sourceObjectList;
+                    //    });
+                    //}
 
                     // ItemsSource (ListBow/TreeView)
                     if (fieldType == typeof(DateTime))
@@ -1527,26 +1550,23 @@ namespace FilterDataGrid
             {
                 try
                 {
-                    //Task.Run(() =>
-                    //{
-                        bool frontendFilterChanged = PopupViewItems.Any(c => c.IsChanged);
-                        if (frontendFilterChanged || search)
-                        {
-                            CurrentFilter.FilteredItems = PopupViewItems.Where(c => c.IsChecked)
-                                                                        .Select(c => c.Content)
-                                                                        .ToHashSet();
-                        }
+                    bool frontendFilterChanged = PopupViewItems.Any(c => c.IsChanged);
+                    if (frontendFilterChanged || search)
+                    {
+                        CurrentFilter.FilteredItems = PopupViewItems.Where(c => c.IsChecked)
+                                                                    .Select(c => c.Content)
+                                                                    .ToHashSet();
+                    }
 
-                        // add a filter if it is not already added previously
-                        if (!CurrentFilter.IsFiltered) CurrentFilter.AddCriteria();
+                    // add a filter if it is not already added previously
+                    if (!CurrentFilter.IsFiltered) CurrentFilter.AddCriteria();
 
-                        // add current filter to GlobalFilterList
-                        if (GlobalFilterList.All(f => f.FieldName != CurrentFilter.FieldName))
-                            GlobalFilterList.Add(CurrentFilter);
+                    // add current filter to GlobalFilterList
+                    if (GlobalFilterList.All(f => f.FieldName != CurrentFilter.FieldName))
+                        GlobalFilterList.Add(CurrentFilter);
 
-                        // set the current field name as the last filter name
-                        lastFilter = CurrentFilter.FieldName;
-                    //}).Wait();
+                    // set the current field name as the last filter name
+                    lastFilter = CurrentFilter.FieldName;
 
                     // set button icon (filtered or not)
                     var col = Columns.FirstOrDefault(c => c is IFilteredDatagridColumn dtx && dtx.FieldName == lastFilter);
@@ -1563,9 +1583,6 @@ namespace FilterDataGrid
                         RemoveCurrentFilter();
 
                     if(FilterApplied != null) FilterApplied?.Invoke(this, null);
-
-
-
                 }
                 catch (Exception ex)
                 {
@@ -1582,6 +1599,9 @@ namespace FilterDataGrid
 
                     stopWatchFilter.Stop();
                     ElapsedTime = stopWatchFilter.Elapsed;
+
+                    SelectedItem = null;
+                    SelectedIndex = -1;
 
                     Debug.WriteLineIf(DebugMode, $"FilterDataGrid.ApplyFilterCommand Elapsed time : {ElapsedTime:mm\\:ss\\.ff}");
                 }
